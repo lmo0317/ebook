@@ -90,25 +90,28 @@ def deploy():
 
     # 5. Inject database and images directly into app container
     print("\n[Step 5/6] Injecting clean database and images into app storage...")
-    commands = [
-        "mkdir -p databases files files/images",
-        "rm -f databases/reader.db databases/reader.db-wal databases/reader.db-shm",
-        "cp /data/local/tmp/reader.db databases/reader.db",
-        f"cp /data/local/tmp/cover.jpg files/{BOOK_ID}.jpg",
-        f"cp /data/local/tmp/book.txt files/{BOOK_ID}.txt",
-        "tar -xf /data/local/tmp/images.tar -C files/images/",
-        "chmod 660 databases/reader.db",
-        f"chmod 660 files/{BOOK_ID}.jpg",
-        f"chmod 660 files/{BOOK_ID}.txt",
-        "ls -la databases",
+    shell_script = (
+        "run-as com.ebook.ocrreader sh -c '"
+        "cd /data/user/0/com.ebook.ocrreader && "
+        "mkdir -p databases files files/images && "
+        "rm -f databases/reader.db* && "
+        "cp /data/local/tmp/reader.db databases/reader.db && "
+        "chmod 660 databases/reader.db && "
+        f"cp /data/local/tmp/cover.jpg files/{BOOK_ID}.jpg && "
+        f"chmod 660 files/{BOOK_ID}.jpg && "
+        f"cp /data/local/tmp/book.txt files/{BOOK_ID}.txt && "
+        f"chmod 660 files/{BOOK_ID}.txt && "
+        "tar -xf /data/local/tmp/images.tar -C files/images/ && "
+        "ls -la databases/ && "
         "ls -la files/images | head -n 8"
-    ]
-
-    for cmd in commands:
-        p = subprocess.run([ADB, "-s", DEVICE_ID, "shell", "run-as", "com.ebook.ocrreader", "sh", "-c", cmd],
-                           capture_output=True, text=True, encoding="utf-8", errors="replace")
-        if p.stdout.strip():
-            print(f"   [run-as] {cmd[:25]:<25} -> {p.stdout.strip()[:80]}")
+        "'\n"
+    )
+    p = subprocess.run([ADB, "-s", DEVICE_ID, "shell"], input=shell_script,
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if p.stdout.strip():
+        print(f"   [run-as output]\n{p.stdout.strip()}")
+    if p.stderr.strip():
+        print(f"   [run-as error]\n{p.stderr.strip()}")
 
     # Clean up temporary files on device
     run_adb(["shell", "rm", "-f", "/data/local/tmp/reader.db", "/data/local/tmp/cover.jpg", "/data/local/tmp/book.txt", "/data/local/tmp/images.tar"])
