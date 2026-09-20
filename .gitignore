@@ -1,0 +1,41 @@
+# Android Gradle build & IDE
+.gradle/
+.kotlin/
+**/build/
+local.properties
+*.iml
+.idea/
+*.apk
+*.aab
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+venv/
+.venv/
+
+# Large generated builds & archives
+output/
+scripts_archive/official_repo/
+scripts_archive/*.zip
+cache/*.bak
+cache/*.tmp
+cache/llm_cache_*.json
+cache/llm_clean_hash_cache.json
+
+# Temporary debug files & screenshots
+galaxy_*.png
+top_bar.png
+book_icon_crop.png
+
+# Test logs & debug outputs
+*_result.txt
+verify_*.txt
+test_*.txt
+detected_samples.txt
+current_output_sample.txt
+turing_search.txt
+page_batch_test.txt
+toc_*.txt
