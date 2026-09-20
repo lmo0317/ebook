@@ -47,14 +47,18 @@ def deploy():
     print("  Deploying Latest APK & Perfect Book Package to Galaxy (S24 Ultra)")
     print("=" * 65)
 
-    # 1. Install APK
-    print("\n[Step 1/6] Installing latest Reader APK...")
-    if not os.path.exists(APK_PATH):
-        raise FileNotFoundError(f"APK not found: {APK_PATH}")
-    
-    install_res = run_adb(["install", "-r", "-d", APK_PATH])
-    if "Success" not in install_res.stdout:
-        print("[Notice] Regular install output:", install_res.stdout)
+    # 1. Install APK if needed
+    print("\n[Step 1/6] Checking Reader APK installation...")
+    pkg_check = run_adb(["shell", "pm", "list", "packages", "com.ebook.ocrreader"])
+    if "com.ebook.ocrreader" in pkg_check.stdout:
+        print("   -> App already installed on Galaxy, skipping APK re-install.")
+    else:
+        print("   -> App not found on Galaxy, installing APK...")
+        if not os.path.exists(APK_PATH):
+            raise FileNotFoundError(f"APK not found: {APK_PATH}")
+        install_res = run_adb(["install", "-r", "-d", APK_PATH])
+        if "Success" not in install_res.stdout:
+            print("[Notice] Regular install output:", install_res.stdout)
 
     # 2. Stop the app
     print("\n[Step 2/6] Stopping app process...")
