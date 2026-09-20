@@ -105,7 +105,7 @@ def deploy():
     ]
 
     for cmd in commands:
-        p = subprocess.run([ADB, "-s", DEVICE_ID, "shell", "run-as", "com.ebook.ocrreader", *cmd.split()],
+        p = subprocess.run([ADB, "-s", DEVICE_ID, "shell", "run-as", "com.ebook.ocrreader", "sh", "-c", cmd],
                            capture_output=True, text=True, encoding="utf-8", errors="replace")
         if p.stdout.strip():
             print(f"   [run-as] {cmd[:25]:<25} -> {p.stdout.strip()[:80]}")
