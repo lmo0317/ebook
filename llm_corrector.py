@@ -85,11 +85,12 @@ def check_112_server(base_url="http://127.0.0.1:8092"):
 ANOMALY_PATTERN = re.compile(
     r'(?:[탤엘알][런럴]\s*[튜특][껑립굉령링]'
     r'|[튜특][껑립굉령]'
-    r'|[가-힣]+[올블눈켓랫솄]'
+    r'|[가-힣]+[올블눈켓랫솄젯논]'
     r'|[가-힣]+[임습합]나다'
     r'|[가-힣]+있있'
-    r'|[가-힣]+[류뉴]님'
-    r'|\b(?:모텔|가중지|전저리|임겟값|자이점|자원의\s*저주|자원\s*축소|어텐선|희신|담변|평기가|의건|바람니다|다툼니다|만돈|작동쾌|뒷습|뵙니|되니|워습|있엎|미처고|눈문|눈매|있율|학신|제기하|제기워|일으켜|덥니|넓질|인용펼|담구|곁정|출억|제안겠|빛습|주장쾌|암는|알려저|맛추|밭있|않앉|제기행|중요해적|대화지|생각활|앞는지|제시하|맥각|국하|숙련원|거쟁|맞취|대처활|학습시청|얻어든|메거니증|퍼센트론|활수|수행활|해결활|컴퓨텅|알고리증|로젠블|플렉품|런되|년리님|자원율|맛충|파인특|파인류)\b'
+    r'|파인[튜특류뉴듯][님낭빌딩넣]'
+    r'|파인튜-'
+    r'|\b(?:모텔|가중지|전저리|임겟값|자이점|자원의\s*저주|자원\s*축소|어텐선|희신|담변|평기가|의건|바람니다|다툼니다|만돈|작동쾌|뒷습|뵙니|되니|워습|있엎|미처고|눈문|눈매|있율|학신|제기하|제기워|일으켜|덥니|넓질|인용펼|담구|곁정|출억|제안겠|빛습|주장쾌|암는|알려저|맛추|밭있|않앉|제기행|중요해적|대화지|생각활|앞는지|제시하|맥각|국하|숙련원|거쟁|맞취|대처활|학습시청|얻어든|메거니증|퍼센트론|활수|수행활|해결활|컴퓨텅|알고리증|로젠블|플렉품|런되|년리님|자원율|맛충|파인특|파인류|보젯|첫지피티|신회할)\b'
     r'|\b[가-힣]{2,4}[0-9]'
     r'|\b[가-힣]\s+[가-힣]\s+[가-힣]\b'
     r')'
@@ -104,18 +105,18 @@ def get_text_hash(text: str) -> str:
 
 def correct_page_body_elements(page_idx, page_elements, llm_cache=None, api_url=DEFAULT_LLM_URL, model_name=DEFAULT_MODEL, timeout=35, log_fn=None):
     """
-    한 페이지 내의 오탈자 의심 BODY 텍스트만 선별하여 단 1회의 LLM 호출로 초고속 교정합니다.
-    - 절대 TITLE, IMAGE, CODE 요소는 덮어쓰지 않습니다.
+    한 페이지 내의 오탈자 의심 BODY 및 TITLE 텍스트를 선별하여 단 1회의 LLM 호출로 초고속 교정합니다.
+    - 절대 IMAGE, CODE 요소는 덮어쓰지 않습니다.
     - 유효한 캐시가 존재하면 즉시 반환
     """
     p_key = str(page_idx)
 
-    # 1. 캐시 확인 (오직 BODY 문단에만 안전하게 적용)
+    # 1. 캐시 확인 (오직 BODY 및 TITLE 문단에 안전하게 적용)
     if llm_cache is not None and p_key in llm_cache:
         cached_dict = llm_cache[p_key]
         if isinstance(cached_dict, dict) and any(len(k) == 16 for k in cached_dict.keys()):
             # 1-A. Hash-based matching
-            hash_map = {get_text_hash(el["text"]): el for el in page_elements if el["type"] == "BODY"}
+            hash_map = {get_text_hash(el["text"]): el for el in page_elements if el["type"] in ("BODY", "TITLE")}
             applied = 0
             for k, c_text in cached_dict.items():
                 if k in hash_map:
@@ -124,12 +125,18 @@ def correct_page_body_elements(page_idx, page_elements, llm_cache=None, api_url=
             if applied > 0:
                 return page_elements
 
-    # 2. 교정 대상 BODY 문단 수집 (오탈자/노이즈가 감지된 문단만 선별)
+    # 2. 지식 베이스(Ground-Truth Knowledge Base) 1차 적용
+    from knowledge_corrector import apply_learned_knowledge
+    for el in page_elements:
+        if el["type"] in ("BODY", "TITLE"):
+            el["text"] = apply_learned_knowledge(el["text"])
+
+    # 3. 잔여 오탈자/노이즈 BODY / TITLE 문단 선별 (LLM 검수 대상)
     body_items = []
     for idx, el in enumerate(page_elements):
-        if el["type"] == "BODY":
+        if el["type"] in ("BODY", "TITLE"):
             t = el["text"].strip()
-            if len(t) >= 12 and has_ocr_anomaly(t):
+            if len(t) >= 6 and has_ocr_anomaly(t):
                 body_items.append((idx, t))
 
     if not body_items:

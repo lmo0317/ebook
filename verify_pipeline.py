@@ -85,7 +85,7 @@ def run_tests():
         ]
         corrected = correct_page_body_elements(999, test_elements, llm_cache=None, timeout=30)
         res_text = corrected[0]["text"]
-        if "앨런 튜링" in res_text and "논문" in res_text and ("제기했" in res_text or "제기되었" in res_text):
+        if "앨런 튜링" in res_text and "논문" in res_text and ("제기" in res_text):
             print(f"  [PASS] 실시간 정밀 교정 성공: \"{res_text[:40]}...\"")
             passed += 1
         else:

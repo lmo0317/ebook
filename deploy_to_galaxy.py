@@ -14,14 +14,23 @@ if not output_dirs:
     raise FileNotFoundError("Output directory not found!")
 OUT_DIR = output_dirs[0]
 
+BOOK_ID = "c0000000-0000-0000-0000-000000000001"
+
 DB_PATH = os.path.join(OUT_DIR, "reader.db")
 COVER_PATH = os.path.join(OUT_DIR, "cover.jpg")
-TXT_PATH = os.path.join(OUT_DIR, "book.txt")
-IMAGES_DIR = os.path.join(OUT_DIR, "images")
-ZIP_PATH = os.path.join(OUT_DIR, "llm-finetuning.zip")
-TAR_PATH = r"D:\work\dev\ebook\images_temp.tar"
+if not os.path.exists(COVER_PATH):
+    COVER_PATH = os.path.join(OUT_DIR, f"{BOOK_ID}.jpg")
 
-BOOK_ID = "c0000000-0000-0000-0000-000000000001"
+TXT_PATH = os.path.join(OUT_DIR, "book.txt")
+if not os.path.exists(TXT_PATH):
+    TXT_PATH = os.path.join(OUT_DIR, f"{BOOK_ID}.txt")
+
+IMAGES_DIR = os.path.join(OUT_DIR, "images")
+
+# Find zip file in OUT_DIR
+zips = [f for f in glob.glob(os.path.join(OUT_DIR, "*.zip"))]
+ZIP_PATH = zips[0] if zips else None
+TAR_PATH = r"D:\work\dev\ebook\images_temp.tar"
 
 def run_adb(cmd_list):
     full_cmd = [ADB, "-s", DEVICE_ID] + cmd_list
@@ -69,8 +78,11 @@ def deploy():
     run_adb(["push", TAR_PATH, "/data/local/tmp/images.tar"])
     
     # Also push the ZIP package directly to the Galaxy Download folder
-    print("   Copying llm-finetuning.zip to /sdcard/Download/...")
-    run_adb(["push", ZIP_PATH, "/sdcard/Download/llm-finetuning.zip"])
+    if ZIP_PATH and os.path.exists(ZIP_PATH):
+        zip_name = os.path.basename(ZIP_PATH)
+        print(f"   Copying {zip_name} to /sdcard/Download/...")
+        run_adb(["push", ZIP_PATH, f"/sdcard/Download/{zip_name}"])
+        run_adb(["push", ZIP_PATH, "/sdcard/Download/llm-finetuning.zip"])
 
     # 5. Inject database and images directly into app container
     print("\n[Step 5/6] Injecting clean database and images into app storage...")
