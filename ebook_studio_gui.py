@@ -751,6 +751,16 @@ class EbookStudioApp(ctk.CTk):
                     if not btext:
                         continue
 
+                    # Filter running footers and page artifacts
+                    if by0 > p_h * 0.92 or re.match(r'^(?:PARTO?I|PART\s*0?1|GPT|전체\s*파인튜닝|효율적인\s*파라미터|vLLM을\s*활용한|APPENDIX\s*부록|마치며|[IVXLCDM]+)[\s\'\"`]*$', btext):
+                        continue
+                    if re.match(r"^['\"\s`]+$", btext):
+                        continue
+
+                    # Strip glued running footer at line end
+                    btext = re.sub(r"\s*(?:전체\s*파인튜닝|효율적인\s*파라미터\s*[튜투]딩\s*기법\s*\(PEFT\)|효율적인\s*파라미터\s*튜닝\s*기법\s*\(PEFT\)|vLLM을\s*활용한\s*서[방빙]|PARTO?I\s*N[LP]의\s*과거와\s*오늘|APPENDIX\s*부록|마치며)\s*['\"]?\s*$", "", btext)
+                    btext = re.sub(r"\s+['\"`]\s*$", "", btext)
+
                     # Skip diagram internal text
                     if filter_diagram_text and crop_rects:
                         is_inside_diagram = False
@@ -788,12 +798,14 @@ class EbookStudioApp(ctk.CTk):
                         cur_y0 = by0
                         cur_y1 = by1
                     else:
-                        prev_ends = bool(re.search(r'[.?!:;”"’\)]\s*$', cur_text_list[-1]))
-                        next_cont = bool(re.match(r'^(?:니다|습니|입니|였다|했다|있었다|으로|에서|로서|에게|과|와)\b', btext))
+                        prev_ends = bool(re.search(r'[.?!:;”"’]\s*$', cur_text_list[-1]))
+                        next_cont = bool(re.match(r'^(?:나|와|과|의|를|을|에|에서|로|으로|는|은|도|이며|며|고|면|지만|서|에게|부터|까지|니다|습니|입니|였다|했다|있었다)\b', btext))
                         if not prev_ends or next_cont:
-                            if re.search(r'[가-힣]+[습합]$', cur_text_list[-1]) and re.match(r'^니다\b', btext):
+                            if cur_text_list[-1].endswith((')', ']', "'", '"')) and next_cont:
                                 cur_text_list[-1] += btext
-                            elif re.search(r'[가-힣]$', cur_text_list[-1]) and re.match(r'^[게고서로며면은는이가을를의에]\b', btext):
+                            elif re.search(r'[가-힣]+[습합]$', cur_text_list[-1]) and re.match(r'^니다\b', btext):
+                                cur_text_list[-1] += btext
+                            elif re.search(r'[가-힣]$', cur_text_list[-1]) and re.match(r'^[게고서로며면은는이가을를의에나와과도]\b', btext):
                                 cur_text_list[-1] += btext
                             else:
                                 cur_text_list.append(btext)
